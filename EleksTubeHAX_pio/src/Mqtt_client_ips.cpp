@@ -142,6 +142,9 @@ uint8_t LastSentPulseBpm = -1;
 uint8_t LastSentBreathBpm = -1;
 float LastSentRainbowSec = -1;
 
+unsigned long previousMillisStatsReport = 0;  
+const long statsInterval = 60000;
+
 double round1(double value) {
   return (int)(value * 10 + 0.5) / 10.0;
 }
@@ -312,6 +315,31 @@ void MqttReportState(bool force) {
       const char* topic = concat2(MQTT_CLIENT, "/rainbow_duration");
       MQTTclient.publish(topic, buffer, true);
       LastSentRainbowSec = MqttStatusRainbowSec;
+
+      Serial.print("TX MQTT: ");
+      Serial.print(topic);
+      Serial.print(" ");
+      Serial.println(buffer);
+    }
+
+    unsigned long currentMillis = millis();
+    // send memory heap information every 60 seconds
+    if (currentMillis - previousMillisStatsReport >= statsInterval) {
+      previousMillisStatsReport = currentMillis;
+
+      size_t freeMemory = ESP.getFreeHeap();
+      size_t totalMemory = ESP.getHeapSize();
+      size_t usedMemory = totalMemory - freeMemory;
+      
+      JsonDocument state;
+      state["memory"]["used"] = usedMemory;
+      state["memory"]["free"] = freeMemory;
+      state["memory"]["total"] = totalMemory;
+
+      char buffer[256];
+      size_t n = serializeJson(state, buffer);
+      const char* topic = concat2(MQTT_CLIENT, "/stats");
+      MQTTclient.publish(topic, buffer, true);
 
       Serial.print("TX MQTT: ");
       Serial.print(topic);
@@ -900,6 +928,66 @@ void MqttReportDiscovery() {
   Serial.print(rainbowSec_topic);
   Serial.print(" ");
   Serial.println(json_buffer);
+  discovery.clear();
+
+  // Used Memory Discovery
+  discovery["device"]["identifiers"][0] = MQTT_CLIENT;
+  discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
+  discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
+  discovery["device"]["name"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
+  discovery["device"]["sw_version"] = MQTT_HOME_ASSISTANT_DISCOVERY_SW_VERSION;
+  discovery["device"]["hw_version"] = MQTT_HOME_ASSISTANT_DISCOVERY_HW_VERSION;
+  discovery["unique_id"] = concat2(MQTT_CLIENT, "_used_memory");
+  discovery["object_id"] = concat2(MQTT_CLIENT, "_used_memory");
+  discovery["entity_category"] = "diagnostic";
+  discovery["name"] = "Used Memory";
+  discovery["state_topic"] = concat2(MQTT_CLIENT, "/stats");
+  discovery["json_attributes_topic"] = concat2(MQTT_CLIENT, "/stats");
+  discovery["value_template"] = "{{ value_json.memory.used }}";
+  discovery["unit_of_measurement"] = "bytes";
+  size_t used_n = serializeJson(discovery, json_buffer);
+  const char* used_topic = concat3("homeassistant/sensor/", MQTT_CLIENT, "_used_memory/config");
+  MQTTclient.publish(used_topic, json_buffer, true);
+  discovery.clear();
+
+  // Free Memory Discovery
+  discovery["device"]["identifiers"][0] = MQTT_CLIENT;
+  discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
+  discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
+  discovery["device"]["name"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
+  discovery["device"]["sw_version"] = MQTT_HOME_ASSISTANT_DISCOVERY_SW_VERSION;
+  discovery["device"]["hw_version"] = MQTT_HOME_ASSISTANT_DISCOVERY_HW_VERSION;
+  discovery["unique_id"] = concat2(MQTT_CLIENT, "_free_memory");
+  discovery["object_id"] = concat2(MQTT_CLIENT, "_free_memory");
+  discovery["entity_category"] = "diagnostic";
+  discovery["name"] = "Free Memory";
+  discovery["state_topic"] = concat2(MQTT_CLIENT, "/stats");
+  discovery["json_attributes_topic"] = concat2(MQTT_CLIENT, "/stats");
+  discovery["value_template"] = "{{ value_json.memory.free }}";
+  discovery["unit_of_measurement"] = "bytes";
+  size_t free_n = serializeJson(discovery, json_buffer);
+  const char* free_topic = concat3("homeassistant/sensor/", MQTT_CLIENT, "_free_memory/config");
+  MQTTclient.publish(free_topic, json_buffer, true);
+  discovery.clear();
+
+  // Total Memory Discovery
+  discovery["device"]["identifiers"][0] = MQTT_CLIENT;
+  discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
+  discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
+  discovery["device"]["name"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
+  discovery["device"]["sw_version"] = MQTT_HOME_ASSISTANT_DISCOVERY_SW_VERSION;
+  discovery["device"]["hw_version"] = MQTT_HOME_ASSISTANT_DISCOVERY_HW_VERSION;
+  discovery["unique_id"] = concat2(MQTT_CLIENT, "_total_memory");
+  discovery["object_id"] = concat2(MQTT_CLIENT, "_total_memory");
+  discovery["entity_category"] = "diagnostic";
+  discovery["name"] = "Total Memory";
+  discovery["state_topic"] = concat2(MQTT_CLIENT, "/stats");
+  discovery["json_attributes_topic"] = concat2(MQTT_CLIENT, "/stats");
+  discovery["value_template"] = "{{ value_json.memory.free }}";
+  discovery["unit_of_measurement"] = "bytes";
+  size_t total_n = serializeJson(discovery, json_buffer);
+  const char* total_topic = concat3("homeassistant/sensor/", MQTT_CLIENT, "_total_memory/config");
+  MQTTclient.publish(total_topic, json_buffer, true);
   discovery.clear();
 
   #endif
