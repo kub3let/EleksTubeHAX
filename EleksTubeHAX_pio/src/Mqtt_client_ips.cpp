@@ -983,7 +983,7 @@ void MqttReportDiscovery() {
   discovery["name"] = "Total Memory";
   discovery["state_topic"] = concat2(MQTT_CLIENT, "/stats");
   discovery["json_attributes_topic"] = concat2(MQTT_CLIENT, "/stats");
-  discovery["value_template"] = "{{ value_json.memory.free }}";
+  discovery["value_template"] = "{{ value_json.memory.total }}";
   discovery["unit_of_measurement"] = "bytes";
   size_t total_n = serializeJson(discovery, json_buffer);
   const char* total_topic = concat3("homeassistant/sensor/", MQTT_CLIENT, "_total_memory/config");
