@@ -94,22 +94,22 @@ void TFTs::showNoMqttStatus() {
 
 void TFTs::enableAllDisplays() {
   // Turn power on to displays.
+  enabled = true;
   #ifndef HARDWARE_IPSTUBE_CLOCK
   digitalWrite(TFT_ENABLE_PIN, ACTIVATEDISPLAYS);
   #else
   ProcessUpdatedDimming();
   #endif
-  enabled = true;
 }
 
 void TFTs::disableAllDisplays() {
   // Turn power off to displays.
+  enabled = false;
   #ifndef HARDWARE_IPSTUBE_CLOCK
   digitalWrite(TFT_ENABLE_PIN, DEACTIVATEDISPLAYS);
   #else
   ProcessUpdatedDimming();
   #endif
-  enabled = false;
 }
 
 void TFTs::toggleAllDisplays() {
